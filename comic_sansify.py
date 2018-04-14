@@ -97,20 +97,20 @@ def ocr(image):
     return pytesseract.image_to_string(gray)
 
 
+def process_frame(frame):
+    text_rectangles = get_text_locations(frame)
+    strings = list(extract_text(frame, text_rectangles))
+    frame = cover_rectangles(frame, text_rectangles)
+    frame = add_comic_sans(frame, text_rectangles, strings)
+    return frame
+
+
 def main():
     cap = cv2.VideoCapture(0)
 
     while True:
         ret, frame = cap.read()
-
-        text_rectangles = get_text_locations(frame)
-        strings = list(extract_text(frame, text_rectangles))
-
-        frame = cover_rectangles(frame, text_rectangles)
-        frame = add_comic_sans(frame, text_rectangles, strings)
-
-        cv2.imshow('frame', frame)
-
+        cv2.imshow('frame', process_frame(frame))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
