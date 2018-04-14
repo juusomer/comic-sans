@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 from PIL import Image
-import PIL.ImageOps  
+import PIL.ImageOps
 import pytesseract
 import argparse
 import os
@@ -38,10 +38,16 @@ def draw_rectangles(frame, rectangles, colors=None, filled=False):
     return new_frame
 
 
-def select_rectangle(frame, rect):
-    x = slice(rect[2], rect[0])
-    y = slice(rect[3], rect[1])
-    return frame[x, y]
+def get_coordinates(frame, rect, padding=0):
+    y_max, x_max = frame.shape[:2]
+    x, y, width, height = rect
+
+    x_slice = slice(
+        max(x - padding, 0), min(x + width + padding, x_max - 1))
+    y_slice = slice(
+        max(y - padding, 0), min(y + height + padding, y_max - 1))
+
+    return x_slice, y_slice
 
 
 def cover_rectangles(frame, rectangles):
@@ -52,12 +58,19 @@ def cover_rectangles(frame, rectangles):
 
     def _get_fill_rectangles():
         for rect in rectangles:
-            rect_area = select_rectangle(frame, rect)
-            color = [np.median(rect_area[:, :, dim]) for dim in range(3)]
+            x, y = get_coordinates(frame, rect, padding=10)
+            selection = frame[y, x]
+            color = [np.median(selection[:, :, dim]) for dim in range(3)]
             yield rect, color
 
     rectangles, colors = zip(*_get_fill_rectangles())
-    return draw_rectangles(new_frame, rectangles, colors, True)
+    new_frame = draw_rectangles(new_frame, rectangles, colors, True)
+
+    for rect in rectangles:
+        x, y = get_coordinates(new_frame, rect, padding=15)
+        new_frame[y, x] = cv2.blur(new_frame[y, x], (20, 20))
+
+    return new_frame
 
 
 def add_comic_sans(frame, text_items):
