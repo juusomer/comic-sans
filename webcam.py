@@ -1,6 +1,11 @@
 import numpy as np
 import cv2
 
+from PIL import Image
+import PIL.ImageOps  
+import pytesseract
+import argparse
+import os
 
 # TODO class
 text_spotter = cv2.text.TextDetectorCNN_create('textbox.prototxt', 'TextBoxes_icdar13.caffemodel')
@@ -34,6 +39,17 @@ def add_comic_sans(frame, text_items):
     # bonus: rainbow colors
     return frame
 
+def ocr(image):
+    # load the example image and convert it to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # threshold the image
+    gray = cv2.threshold(gray, 0, 255,
+        cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    # use pytesseract ocr
+    text = pytesseract.image_to_string(gray)
+    print(text)
+    return text
+
 
 def main():
     cap = cv2.VideoCapture(0)
@@ -42,6 +58,8 @@ def main():
         # TODO limit frame rate
 
         ret, frame = cap.read()
+
+        ocr(frame)
 
         frame = extract_text(frame)
 
