@@ -1,11 +1,8 @@
 import numpy as np
 import cv2
-
-from PIL import Image
-import PIL.ImageOps
 import pytesseract
-import argparse
-import os
+from PIL import ImageFont, Image, ImageDraw
+
 
 # TODO class
 text_spotter = cv2.text.TextDetectorCNN_create(
@@ -73,40 +70,44 @@ def cover_rectangles(frame, rectangles):
     return new_frame
 
 
-def add_comic_sans(frame, text_items):
-    # TODO
-    # replace the original text with comic sans in same size, location,
-    # orientation and content
-    # https://docs.opencv.org/3.1.0/d6/d6e/group__imgproc__draw.html#ga5126f47f883d730f633d74f07456c576
-    # bonus: rainbow colors
-    return frame
+def extract_text(frame, text_rectangles):
+    for rect in text_rectangles:
+        x, y = get_coordinates(frame, rect, 5)
+        text_area = frame[y, x]
+        text = ocr(text_area)
+        yield text
+
+
+def add_comic_sans(frame, text_rectangles, strings):
+    cv2_im_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    pil_im = Image.fromarray(cv2_im_rgb)
+
+    for string, rectangle in zip(strings, text_rectangles):
+        x, y, height, width = rectangle
+        draw = ImageDraw.Draw(pil_im)
+        font = ImageFont.truetype('/Library/Fonts/Comic Sans MS.ttf', int(height / 3))
+        draw.text((x, y), string, font=font, fill=(255, 192, 203))
+
+    return cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
+
 
 def ocr(image):
-    # load the example image and convert it to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # threshold the image
-    gray = cv2.threshold(gray, 0, 255,
-        cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    # use pytesseract ocr
+    gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
     return pytesseract.image_to_string(gray)
 
 
 def main():
     cap = cv2.VideoCapture(0)
 
-    latest_text = 'comic sans'
-
     while True:
-        # TODO limit frame rate
-
         ret, frame = cap.read()
-        text_rectangles = get_text_locations(frame)
 
-        text = ocr(frame)
-        if text:
-            latest_text = text
-        print("\"" + latest_text + "\"")
+        text_rectangles = get_text_locations(frame)
+        strings = list(extract_text(frame, text_rectangles))
+
         frame = cover_rectangles(frame, text_rectangles)
+        frame = add_comic_sans(frame, text_rectangles, strings)
 
         cv2.imshow('frame', frame)
 
