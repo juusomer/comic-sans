@@ -75,13 +75,13 @@ def ocr(image):
     gray = cv2.threshold(gray, 0, 255,
         cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
     # use pytesseract ocr
-    text = pytesseract.image_to_string(gray)
-    print(text)
-    return text
+    return pytesseract.image_to_string(gray)
 
 
 def main():
     cap = cv2.VideoCapture(0)
+
+    latest_text = 'comic sans'
 
     while True:
         # TODO limit frame rate
@@ -89,7 +89,10 @@ def main():
         ret, frame = cap.read()
         text_rectangles = get_text_locations(frame)
 
-        ocr(frame)
+        text = ocr(frame)
+        if text:
+            latest_text = text
+        print("\"" + latest_text + "\"")
         frame = cover_rectangles(frame, text_rectangles)
 
         cv2.imshow('frame', frame)
