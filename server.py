@@ -1,11 +1,21 @@
 import cv2
 from comic_sansify import process_frame
+from flask import Flask, make_response, request
+import numpy as np
 
-def read(image_stream):
-    img_array = np.asarray(bytearray(image_stream.read()), dtype=np.uint8)
-    return cv2.imdecode(img_array, cv2_img_flag)
 
-def write(cv2_array):
-    pass
+app = Flask(__name__)
 
-# TODO request handler
+@app.route('/', methods=['POST'])
+def process():
+    image_array = np.fromstring(request.data, np.uint8)
+    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+
+    image_processed = process_frame(image)
+    _, img_encoded = cv2.imencode('.jpg', image_processed)
+
+    response = make_response(img_encoded.tostring())
+    response.headers.set('Content-Type', 'image/jpeg')
+    response.headers.set('Content-Disposition', 'attachment')
+
+    return response
